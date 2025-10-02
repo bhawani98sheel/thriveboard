@@ -1,18 +1,19 @@
 const express = require("express");
+const { protect } = require("../middleware/authMiddleware");
+const upload = require("../middleware/fileUpload");
+
 const {
-  getProfileById,
-  createProfile,
+  getMyProfile,
   updateProfile,
   uploadAvatar,
+  deleteAvatar,
 } = require("../controllers/profileController");
-
-const upload = require("../middleware/fileUpload");
 
 const router = express.Router();
 
-router.get("/:id", getProfileById);
-router.post("/", createProfile);
-router.put("/:id", updateProfile);
-router.post("/:id/avatar", upload.single("avatar"), uploadAvatar); // ✅ avatar route
+router.get("/me", protect, getMyProfile);
+router.put("/", protect, updateProfile);
+router.post("/avatar", protect, upload.single("avatar"), uploadAvatar);
+router.delete("/avatar", protect, deleteAvatar);
 
 module.exports = router;

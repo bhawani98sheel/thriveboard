@@ -1,10 +1,11 @@
-const express = require('express')
-const router = express.Router()
-const fileController = require('../controllers/fileController')
-const upload = require('../middleware/fileUpload')
+const express = require("express");
+const router = express.Router();
+const { uploadFile, getFiles, deleteFile } = require("../controllers/fileController");
+const { protect } = require("../middleware/authMiddleware");
+const upload = require("../middleware/fileUpload");
 
-router.post('/upload', upload.single('file'), fileController.uploadFile)
-router.get('/user/:userId', fileController.getUserFiles)
-router.delete('/:fileId', fileController.deleteFile)
+router.get("/", protect, getFiles);
+router.post("/", protect, upload.single("file"), uploadFile);  // ✅ field name must be "file"
+router.delete("/:id", protect, deleteFile);
 
-module.exports = router
+module.exports = router;

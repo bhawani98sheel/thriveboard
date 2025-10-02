@@ -1,53 +1,68 @@
-const jwt = require('jsonwebtoken')
-const User = require('../models/User')
-const config = require('../config/config')
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-// Register new user
-exports.register = async (req, res) => {
+// generate token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+};
+
+// Register
+const Profile = require("../models/Profile");
+
+const registerUser = async (req, res) => {
+  const { name, email, password } = req.body;
   try {
-    const { email, password } = req.body
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' })
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Please fill all fields" });
     }
 
-    // Create new user
-    const user = new User({ email, password })
-    await user.save()
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
 
-    // Generate token
-    const token = jwt.sign({ userId: user._id }, config.JWT_SECRET)
+    const user = await User.create({ name, email, password });
 
-    res.status(201).json({ token })
-  } catch (error) {
-    res.status(500).json({ message: 'Error registering user' })
+    // ✅ create empty profile for new user
+    await Profile.create({
+      user: user._id,
+      name,
+      avatar: "/images/default-avatar.png",
+      bio: "New here 🚀",
+      preferences: { theme: "light", notifications: true },
+      stats: { dailyTasks: 0, uploads: 0, streak: 0 },
+    });
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      token: generateToken(user._id),
+    });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
-}
+};
 
-// Login user
-exports.login = async (req, res) => {
+
+
+// Login
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const { email, password } = req.body
-
-    // Find user
-    const user = await User.findOne({ email })
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+    const user = await User.findOne({ email });
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401).json({ message: "Invalid email or password" });
     }
-
-    // Check password
-    const isMatch = await user.comparePassword(password)
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' })
-    }
-
-    // Generate token
-    const token = jwt.sign({ userId: user._id }, config.JWT_SECRET)
-
-    res.json({ token })
-  } catch (error) {
-    res.status(500).json({ message: 'Error logging in' })
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-}
+};
+
+module.exports = { registerUser, loginUser };

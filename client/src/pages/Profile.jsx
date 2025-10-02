@@ -4,85 +4,90 @@ import axios from "axios";
 function Profile() {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    bio: "",
-    theme: "light",
-    notifications: true,
-  });
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [theme, setTheme] = useState("light");
+  const [notifications, setNotifications] = useState(true);
   const [avatarFile, setAvatarFile] = useState(null);
 
-  const profileId = "68de9c8d168595b9d0db2788"; // your seeded profile
-
-  // Fetch profile
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await axios.get(`/api/profile/${profileId}`);
-        setProfile(res.data);
-        setFormData({
-          name: res.data.name || "",
-          bio: res.data.bio || "",
-          theme: res.data.preferences?.theme || "light",
-          notifications: res.data.preferences?.notifications ?? true,
-        });
-      } catch (err) {
-        setError("Error fetching profile");
-      }
-    };
-    fetchProfile();
-  }, [profileId]);
-
-  // Handle form input
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+  const user = JSON.parse(localStorage.getItem("user"));
+  const authHeaders = {
+    headers: { Authorization: `Bearer ${user?.token}` },
   };
 
-  // Save profile changes
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // 🔹 Fetch profile
+  const fetchProfile = async () => {
     try {
-      const res = await axios.put(`/api/profile/${profileId}`, {
-        name: formData.name,
-        bio: formData.bio,
-        preferences: {
-          theme: formData.theme,
-          notifications: formData.notifications,
-        },
-      });
+      const res = await axios.get("/api/profile/me", authHeaders);
       setProfile(res.data);
-      setEditing(false);
+      setName(res.data.name);
+      setBio(res.data.bio);
+      setTheme(res.data.preferences?.theme || "light");
+      setNotifications(res.data.preferences?.notifications ?? true);
     } catch (err) {
-      setError("Error updating profile");
+      console.error("Fetch profile error:", err);
+      setError("Error fetching profile");
     }
   };
 
-  // Handle avatar upload
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  // 🔹 Update profile
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.put(
+        "/api/profile",
+        { name, bio, preferences: { theme, notifications } },
+        authHeaders
+      );
+      setProfile(res.data);
+      alert("✅ Profile updated!");
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("❌ Error updating profile");
+    }
+  };
+
+  // 🔹 Upload avatar
   const handleAvatarUpload = async (e) => {
     e.preventDefault();
     if (!avatarFile) return;
-
-    const formDataObj = new FormData();
-    formDataObj.append("avatar", avatarFile);
-
     try {
-      const res = await axios.post(`/api/profile/${profileId}/avatar`, formDataObj, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const formData = new FormData();
+      formData.append("avatar", avatarFile);
+      const res = await axios.post("/api/profile/avatar", formData, {
+        ...authHeaders,
+        headers: {
+          ...authHeaders.headers,
+          "Content-Type": "multipart/form-data",
+        },
       });
       setProfile(res.data);
       setAvatarFile(null);
+      alert("✅ Avatar uploaded!");
     } catch (err) {
-      setError("Error uploading avatar");
+      console.error("Upload avatar error:", err);
+      alert("❌ Error uploading avatar");
+    }
+  };
+
+  // 🔹 Delete avatar
+  const handleAvatarDelete = async () => {
+    try {
+      const res = await axios.delete("/api/profile/avatar", authHeaders);
+      setProfile(res.data.profile);
+      alert("✅ Avatar deleted!");
+    } catch (err) {
+      console.error("Delete avatar error:", err);
+      alert("❌ Error deleting avatar");
     }
   };
 
   if (error) return <h2>{error}</h2>;
-  if (!profile) return <h2>Loading profile...</h2>;
+  if (!profile) return <h2>Loading...</h2>;
 
   return (
     <div
@@ -95,67 +100,96 @@ function Profile() {
         background: "#fff",
       }}
     >
-      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>👤 Profile</h2>
+      <h2 style={{ textAlign: "center" }}>👤 Profile</h2>
 
+      {/* Avatar Section */}
       <div style={{ textAlign: "center", marginBottom: "20px" }}>
         <img
-          src={profile.avatar ? `http://localhost:5000${profile.avatar}` : "/default-avatar.png"}
+          src={
+            profile.avatar
+              ? `http://localhost:5000${profile.avatar}`
+              : "/default-avatar.png"
+          }
           alt="Avatar"
-          style={{ width: "120px", height: "120px", borderRadius: "50%", objectFit: "cover" }}
+          style={{
+            width: "120px",
+            height: "120px",
+            borderRadius: "50%",
+            objectFit: "cover",
+          }}
         />
+        <form onSubmit={handleAvatarUpload} style={{ marginTop: "10px" }}>
+          <input
+            type="file"
+            onChange={(e) => setAvatarFile(e.target.files[0])}
+          />
+          <button type="submit">Upload Avatar</button>
+        </form>
+        <button
+          onClick={handleAvatarDelete}
+          style={{
+            marginTop: "10px",
+            background: "red",
+            color: "white",
+            padding: "5px 10px",
+          }}
+        >
+          🗑 Delete Avatar
+        </button>
       </div>
 
-      {/* Avatar Upload */}
-      <form onSubmit={handleAvatarUpload} style={{ marginBottom: "20px", textAlign: "center" }}>
-        <input type="file" onChange={(e) => setAvatarFile(e.target.files[0])} />
-        <button type="submit" style={{ marginLeft: "10px", padding: "5px 10px" }}>Upload</button>
+      {/* Profile Form */}
+      <form onSubmit={handleUpdate}>
+        <label>Name:</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={{ width: "100%", marginBottom: "10px" }}
+        />
+
+        <label>Bio:</label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          style={{ width: "100%", marginBottom: "10px" }}
+        />
+
+        <label>Theme:</label>
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          style={{ width: "100%", marginBottom: "10px" }}
+        >
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+
+        <label>
+          Notifications:
+          <input
+            type="checkbox"
+            checked={notifications}
+            onChange={(e) => setNotifications(e.target.checked)}
+            style={{ marginLeft: "10px" }}
+          />
+        </label>
+
+        <button type="submit" style={{ marginTop: "15px" }}>
+          💾 Save Changes
+        </button>
       </form>
 
-      {!editing ? (
-        <>
-          <p><strong>Name:</strong> {profile.name}</p>
-          <p><strong>Bio:</strong> {profile.bio}</p>
-          <p><strong>Theme:</strong> {profile.preferences?.theme}</p>
-          <p><strong>Notifications:</strong> {profile.preferences?.notifications ? "Enabled" : "Disabled"}</p>
-          <p><strong>Created:</strong> {profile.createdAt ? new Date(profile.createdAt).toLocaleString() : "N/A"}</p>
-
-          <button
-            onClick={() => setEditing(true)}
-            style={{ marginTop: "20px", padding: "10px 20px", background: "#2563eb", color: "white", border: "none", borderRadius: "5px" }}
-          >
-            ✏️ Edit Profile
-          </button>
-        </>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Name: </label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} style={{ padding: "5px", width: "100%" }} />
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Bio: </label>
-            <textarea name="bio" value={formData.bio} onChange={handleChange} style={{ padding: "5px", width: "100%" }} />
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Theme: </label>
-            <select name="theme" value={formData.theme} onChange={handleChange} style={{ padding: "5px", width: "100%" }}>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <label>
-              <input type="checkbox" name="notifications" checked={formData.notifications} onChange={handleChange} /> Enable Notifications
-            </label>
-          </div>
-          <button type="submit" style={{ padding: "10px 20px", background: "#16a34a", color: "white", border: "none", borderRadius: "5px", marginRight: "10px" }}>
-            💾 Save
-          </button>
-          <button type="button" onClick={() => setEditing(false)} style={{ padding: "10px 20px", background: "#dc2626", color: "white", border: "none", borderRadius: "5px" }}>
-            ❌ Cancel
-          </button>
-        </form>
-      )}
+      {/* Stats */}
+      <h3 style={{ marginTop: "20px" }}>📊 Stats</h3>
+      <p>
+        <strong>Daily Tasks:</strong> {profile.stats?.dailyTasks || 0}
+      </p>
+      <p>
+        <strong>Uploads:</strong> {profile.stats?.uploads || 0}
+      </p>
+      <p>
+        <strong>🔥 Streak:</strong> {profile.stats?.streak || 0} days
+      </p>
     </div>
   );
 }

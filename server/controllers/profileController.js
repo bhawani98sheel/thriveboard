@@ -1,73 +1,103 @@
+const fs = require("fs");
+const path = require("path");
 const Profile = require("../models/Profile");
 
-// @desc   Get profile by ID
-const getProfileById = async (req, res) => {
+// @desc Get logged-in user's profile
+// @route GET /api/profile/me
+// @access Private
+const getMyProfile = async (req, res) => {
   try {
-    const profile = await Profile.findById(req.params.id);
+    const profile = await Profile.findOne({ user: req.user._id });
     if (!profile) {
       return res.status(404).json({ message: "Profile not found" });
     }
     res.json(profile);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("getMyProfile error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// @desc   Create new profile
-const createProfile = async (req, res) => {
-  try {
-    const profile = new Profile(req.body);
-    await profile.save();
-    res.status(201).json(profile);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-};
-
-// @desc   Update profile
+// @desc Update profile
+// @route PUT /api/profile
+// @access Private
 const updateProfile = async (req, res) => {
   try {
-    const profile = await Profile.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const { name, bio, preferences } = req.body;
+    let profile = await Profile.findOne({ user: req.user._id });
+
     if (!profile) {
-      return res.status(404).json({ message: "Profile not found" });
+      // if no profile, create one
+      profile = new Profile({
+        user: req.user._id,
+        name,
+        bio,
+        preferences,
+      });
+    } else {
+      profile.name = name || profile.name;
+      profile.bio = bio || profile.bio;
+      profile.preferences = preferences || profile.preferences;
+      profile.updatedAt = Date.now();
     }
+
+    await profile.save();
     res.json(profile);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("updateProfile error:", err);
+    res.status(500).json({ message: "Error updating profile" });
   }
 };
 
-// @desc   Upload avatar
-// @route  POST /api/profile/:id/avatar
+// @desc Upload avatar
+// @route POST /api/profile/avatar
+// @access Private
 const uploadAvatar = async (req, res) => {
   try {
-    console.log("File received:", req.file); // ✅ debug log
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    const profile = await Profile.findById(req.params.id);
-    if (!profile) {
-      return res.status(404).json({ message: "Profile not found" });
-    }
+    const profile = await Profile.findOne({ user: req.user._id });
+    if (!profile) return res.status(404).json({ message: "Profile not found" });
 
     profile.avatar = `/uploads/${req.file.filename}`;
     profile.updatedAt = Date.now();
     await profile.save();
 
     res.json(profile);
-  } catch (error) {
-    console.error("Upload error:", error);
-    res.status(500).json({ message: "Error uploading avatar", error: error.message });
+  } catch (err) {
+    console.error("uploadAvatar error:", err);
+    res.status(500).json({ message: "Error uploading avatar" });
+  }
+};
+
+// @desc Delete avatar
+// @route DELETE /api/profile/avatar
+// @access Private
+const deleteAvatar = async (req, res) => {
+  try {
+    const profile = await Profile.findOne({ user: req.user._id });
+    if (!profile) return res.status(404).json({ message: "Profile not found" });
+
+    if (profile.avatar && profile.avatar !== "/images/default-avatar.png") {
+      const filePath = path.join(__dirname, "..", profile.avatar.replace(/^\//, ""));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      profile.avatar = "/images/default-avatar.png";
+      profile.updatedAt = Date.now();
+      await profile.save();
+    }
+
+    res.json({ message: "Avatar deleted", profile });
+  } catch (err) {
+    console.error("deleteAvatar error:", err);
+    res.status(500).json({ message: "Error deleting avatar" });
   }
 };
 
 module.exports = {
-  getProfileById,
-  createProfile,
+  getMyProfile,
   updateProfile,
-  uploadAvatar, // ✅ export avatar upload
+  uploadAvatar,
+  deleteAvatar,
 };

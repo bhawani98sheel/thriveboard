@@ -13,7 +13,7 @@ const plannerRoutes = require('./routes/plannerRoutes')
 const fileRoutes = require('./routes/fileRoutes')
 
 // Import middleware
-const { authenticateToken } = require('./middleware/auth')
+const { authenticateToken } = require('./middleware/authMiddleware')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()

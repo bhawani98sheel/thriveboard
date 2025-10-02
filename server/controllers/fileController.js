@@ -1,94 +1,45 @@
-const fs = require('fs')
-const path = require('path')
-const mongoose = require('mongoose')
-
-const fileSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  filename: {
-    type: String,
-    required: true
-  },
-  path: {
-    type: String,
-    required: true
-  },
-  mimetype: {
-    type: String,
-    required: true
-  },
-  size: {
-    type: Number,
-    required: true
-  },
-  uploadDate: {
-    type: Date,
-    default: Date.now
-  }
-})
-
-const File = mongoose.model('File', fileSchema)
+const File = require("../models/File");
 
 // Upload file
-exports.uploadFile = async (req, res) => {
+const uploadFile = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' })
-    }
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
     const file = new File({
-      user: req.user.userId,
+      user: req.user._id,
       filename: req.file.originalname,
-      path: req.file.path,
-      mimetype: req.file.mimetype,
-      size: req.file.size
-    })
+      filepath: "/uploads/" + req.file.filename,
+      size: req.file.size,          // ✅ now saving size
+      mimetype: req.file.mimetype,  // ✅ now saving mimetype
+    });
 
-    await file.save()
-    res.status(201).json(file)
-  } catch (error) {
-    res.status(500).json({ message: 'Error uploading file' })
+    await file.save();
+    res.status(201).json(file);
+  } catch (err) {
+    console.error("File upload error:", err);
+    res.status(500).json({ message: err.message });
   }
-}
+};
 
-// Get user's files
-exports.getUserFiles = async (req, res) => {
+// Get user files
+const getFiles = async (req, res) => {
   try {
-    const files = await File.find({ user: req.user.userId })
-    res.json(files)
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching files' })
+    const files = await File.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-}
+};
 
 // Delete file
-exports.deleteFile = async (req, res) => {
+const deleteFile = async (req, res) => {
   try {
-    const file = await File.findOne({
-      _id: req.params.fileId,
-      user: req.user.userId
-    })
-
-    if (!file) {
-      return res.status(404).json({ message: 'File not found' })
-    }
-
-    // Delete file from filesystem
-    fs.unlink(file.path, async (err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error deleting file from filesystem' })
-      }
-
-      // Delete file document from database
-      await File.findByIdAndDelete(file._id)
-      res.json({ message: 'File deleted successfully' })
-    })
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting file' })
+    const file = await File.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    if (!file) return res.status(404).json({ message: "File not found" });
+    res.json({ message: "File deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-}
+};
 
-module.exports = { File }
+module.exports = { uploadFile, getFiles, deleteFile };
