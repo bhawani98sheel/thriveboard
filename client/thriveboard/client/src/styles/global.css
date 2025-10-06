@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background-color: #f9fafb;
+}
+a {
+  text-decoration: none;
+  color: #2563eb;
+}
+a:hover {
+  text-decoration: underline;
+}
+/* Highlight task days in calendar */
+.task-day {
+  background: #2563eb !important;
+  color: white !important;
+  border-radius: 50%;
+}

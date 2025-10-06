@@ -1,0 +1,15 @@
+{
+  "name": "thriveboard",
+  "version": "1.0.0",
+  "description": "A personal productivity dashboard application",
+  "main": "index.js",
+  "scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview"
+},
+  "dependencies": {
+    "concurrently": "^8.0.1"
+  },
+  "devDependencies": {}
+}
