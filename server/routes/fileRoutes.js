@@ -1,11 +1,27 @@
+// server/routes/fileRoutes.js
 const express = require("express");
 const router = express.Router();
-const { uploadFile, getFiles, deleteFile } = require("../controllers/fileController");
-const { protect } = require("../middleware/authMiddleware");
-const upload = require("../middleware/fileUpload");
+const multer = require("multer");
+const path = require("path");
+const { authMiddleware } = require("../middleware/authMiddleware");
+const { uploadFile, getUserFiles, deleteFile } = require("../controllers/fileController");
 
-router.get("/", protect, getFiles);
-router.post("/", protect, upload.single("file"), uploadFile);  // ✅ field name must be "file"
-router.delete("/:id", protect, deleteFile);
+// ✅ Setup storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../uploads"));
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${file.fieldname}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+// ✅ Define routes
+router.post("/", authMiddleware, upload.single("file"), uploadFile);
+router.get("/", authMiddleware, getUserFiles);
+router.delete("/:id", authMiddleware, deleteFile);
 
 module.exports = router;

@@ -4,12 +4,12 @@
   "description": "A personal productivity dashboard application",
   "main": "index.js",
   "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview"
-},
-  "dependencies": {
-    "concurrently": "^8.0.1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "devDependencies": {}
+  "dependencies": {
+    "concurrently": "^8.0.1",
+    "react-calendar": "^6.0.0"
+  }
 }

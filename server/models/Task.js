@@ -1,9 +1,11 @@
+// server/models/Task.js
 const mongoose = require("mongoose");
 
 const taskSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // linked later when JWT is added
+    ref: "User",
+    required: true,
   },
   title: {
     type: String,
@@ -11,7 +13,7 @@ const taskSchema = new mongoose.Schema({
   },
   dueDate: {
     type: Date,
-    required: true, // ✅ force due date
+    required: true,
   },
   completed: {
     type: Boolean,
@@ -23,6 +25,7 @@ const taskSchema = new mongoose.Schema({
   },
 });
 
-const Task = mongoose.model("Task", taskSchema);
+// Prevent model overwrite during hot reload
+const Task = mongoose.models.Task || mongoose.model("Task", taskSchema);
 
 module.exports = Task;

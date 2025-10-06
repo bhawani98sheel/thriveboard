@@ -6,12 +6,21 @@
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
-  background-color: #f9fafb;
+  background-color: #f2faf2;
 }
 a {
   text-decoration: none;
-  color: #2563eb;
+  color: #eb25ca;
 }
 a:hover {
   text-decoration: underline;
+}
+/* Hide desktop nav-links on small screens */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none !important;
+  }
+  .hamburger {
+    display: block !important;
+  }
 }

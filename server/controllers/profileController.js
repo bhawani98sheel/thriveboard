@@ -1,11 +1,10 @@
+// server/controllers/profileController.js
 const fs = require("fs");
 const path = require("path");
 const Profile = require("../models/Profile");
 
-// @desc Get logged-in user's profile
-// @route GET /api/profile/me
-// @access Private
-const getMyProfile = async (req, res) => {
+// 🔹 Get logged-in user's profile
+exports.getMyProfile = async (req, res) => {
   try {
     const profile = await Profile.findOne({ user: req.user._id });
     if (!profile) {
@@ -18,22 +17,14 @@ const getMyProfile = async (req, res) => {
   }
 };
 
-// @desc Update profile
-// @route PUT /api/profile
-// @access Private
-const updateProfile = async (req, res) => {
+// 🔹 Update profile
+exports.updateProfile = async (req, res) => {
   try {
     const { name, bio, preferences } = req.body;
     let profile = await Profile.findOne({ user: req.user._id });
 
     if (!profile) {
-      // if no profile, create one
-      profile = new Profile({
-        user: req.user._id,
-        name,
-        bio,
-        preferences,
-      });
+      profile = new Profile({ user: req.user._id, name, bio, preferences });
     } else {
       profile.name = name || profile.name;
       profile.bio = bio || profile.bio;
@@ -49,10 +40,8 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// @desc Upload avatar
-// @route POST /api/profile/avatar
-// @access Private
-const uploadAvatar = async (req, res) => {
+// 🔹 Upload avatar
+exports.uploadAvatar = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -70,10 +59,8 @@ const uploadAvatar = async (req, res) => {
   }
 };
 
-// @desc Delete avatar
-// @route DELETE /api/profile/avatar
-// @access Private
-const deleteAvatar = async (req, res) => {
+// 🔹 Delete avatar
+exports.deleteAvatar = async (req, res) => {
   try {
     const profile = await Profile.findOne({ user: req.user._id });
     if (!profile) return res.status(404).json({ message: "Profile not found" });
@@ -93,11 +80,4 @@ const deleteAvatar = async (req, res) => {
     console.error("deleteAvatar error:", err);
     res.status(500).json({ message: "Error deleting avatar" });
   }
-};
-
-module.exports = {
-  getMyProfile,
-  updateProfile,
-  uploadAvatar,
-  deleteAvatar,
 };

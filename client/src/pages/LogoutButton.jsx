@@ -5,8 +5,8 @@ function LogoutButton() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    navigate("/login");
+    localStorage.removeItem("user"); // ✅ clear user token/session
+    navigate("/"); // ✅ go to Landing page
   };
 
   return (

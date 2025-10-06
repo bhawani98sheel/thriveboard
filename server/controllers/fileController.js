@@ -1,45 +1,48 @@
+// server/controllers/fileController.js
+const fs = require("fs");
+const path = require("path");
 const File = require("../models/File");
 
-// Upload file
-const uploadFile = async (req, res) => {
+exports.uploadFile = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const file = new File({
+    const file = await File.create({
       user: req.user._id,
-      filename: req.file.originalname,
-      filepath: "/uploads/" + req.file.filename,
-      size: req.file.size,          // ✅ now saving size
-      mimetype: req.file.mimetype,  // ✅ now saving mimetype
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      path: `/uploads/${req.file.filename}`,
+      size: req.file.size,
     });
 
-    await file.save();
-    res.status(201).json(file);
+    res.json(file);
   } catch (err) {
-    console.error("File upload error:", err);
-    res.status(500).json({ message: err.message });
+    console.error("uploadFile error:", err);
+    res.status(500).json({ message: "Error uploading file" });
   }
 };
 
-// Get user files
-const getFiles = async (req, res) => {
+exports.getUserFiles = async (req, res) => {
   try {
     const files = await File.find({ user: req.user._id }).sort({ createdAt: -1 });
     res.json(files);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("getUserFiles error:", err);
+    res.status(500).json({ message: "Error fetching files" });
   }
 };
 
-// Delete file
-const deleteFile = async (req, res) => {
+exports.deleteFile = async (req, res) => {
   try {
     const file = await File.findOneAndDelete({ _id: req.params.id, user: req.user._id });
     if (!file) return res.status(404).json({ message: "File not found" });
-    res.json({ message: "File deleted" });
+
+    const filePath = path.join(__dirname, "..", "uploads", file.filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    res.json({ message: "File deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("deleteFile error:", err);
+    res.status(500).json({ message: "Error deleting file" });
   }
 };
-
-module.exports = { uploadFile, getFiles, deleteFile };
